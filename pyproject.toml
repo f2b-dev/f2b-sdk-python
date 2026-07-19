@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "f2b"
+version = "0.1.0"
+description = "灵境云 / F2B 官方 Python SDK（沙箱 create / run / files / kill）"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "f2b-dev" }]
+keywords = ["f2b", "lingjing", "sandbox", "ai-agent"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Typing :: Typed",
+]
+# 1.0 前不发布 PyPI；依赖保持最小（仅标准库）
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/f2b-dev/f2b-sdk-python"
+Repository = "https://github.com/f2b-dev/f2b-sdk-python"
+Issues = "https://github.com/f2b-dev/f2b-sdk-python/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+f2b = ["py.typed"]

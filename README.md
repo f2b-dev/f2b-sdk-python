@@ -1,21 +1,69 @@
-# f2b-sdk-python
+# f2b · f2b-sdk-python
 
-灵境云 / F2B 组织仓库骨架。详见组织设计与 [todo](https://github.com/f2b-dev)。
+灵境云官方 **Python** SDK：创建沙箱 → 命令 → 文件 → 销毁。
 
-| 仓 | 角色 |
-|----|------|
-| f2b-web | 官网 + 控制台壳 + BFF + 产品插件 |
-| f2b-sdk-js | 官方 TypeScript SDK |
-| f2b-sdk-python | 官方 Python SDK |
-| f2b-mcp-gateway | MCP 网关 |
-| f2b-tunnel | 隧道代理 |
-| f2b-infra | 部署 / compose |
-| f2b-docs | 开发者文档 |
+> **1.0 前不发布 PyPI**。本地用 editable 或 `PYTHONPATH=src`。
 
-**本仓（f2b-sdk-python）**：待从迁移计划填充实现。当前仅占位，便于 org 可见与协作。
+## 安装（开发期）
 
-- 契约：https://github.com/f2b-dev/f2b-spec
-- 沙箱服务：https://github.com/f2b-dev/f2b-sandbox
-- 组织：https://github.com/f2b-dev
+```bash
+cd f2b-sdk-python
+python3 -m pip install -e .
+# 或不安装：
+export PYTHONPATH=src
+```
+
+## 60 秒 quickstart
+
+先启动 [f2b-sandbox](https://github.com/f2b-dev/f2b-sandbox)：
+
+```bash
+cd ../f2b-sandbox && F2B_SANDBOX_BACKEND=fake pnpm dev
+# → http://127.0.0.1:8787
+```
+
+```python
+from f2b import F2bClient, Sandbox
+
+client = F2bClient(base_url="http://127.0.0.1:8787")
+# client = F2bClient(base_url="...", api_key="sk_live_...")  # F2B_AUTH_MODE=api_key 时
+
+sbx = Sandbox.create(client, template="base")
+print(sbx.run("echo hello")["stdout"])
+sbx.write("/home/user/a.txt", "ok")
+print(sbx.read("/home/user/a.txt"))
+sbx.kill()
+```
+
+本仓：
+
+```bash
+python3 scripts/smoke.py     # 需 :8787 已启动 → PY_SDK_SMOKE_OK
+python3 examples/quickstart.py
+```
+
+## API 路径
+
+| 配置 | 用途 |
+|------|------|
+| `base_url=http://127.0.0.1:8787`（默认 `path_prefix="/v1"`） | 直连 **f2b-sandbox** |
+| `path_prefix="/api"` | 兼容旧式 `/api/sandboxes` BFF |
+
+浏览器控制台请走 **f2b-web BFF**，不要在前端塞管理密钥。本 SDK 适合 **服务端 / Agent 运行时**。
+
+## 导出
+
+- `F2bClient` / `LingjingClient`（别名）
+- `Sandbox`（`create` / `run` / `write` / `read` / `list_files` / `kill`）
+- `F2bError` / `ErrorCode`
+
+仅依赖 **Python 标准库**（`urllib`）。
+
+## 相关
+
+- 契约：https://github.com/f2b-dev/f2b-spec  
+- 沙箱服务：https://github.com/f2b-dev/f2b-sandbox  
+- TS SDK：https://github.com/f2b-dev/f2b-sdk-js  
+- 组织：https://github.com/f2b-dev  
 
 Apache-2.0
