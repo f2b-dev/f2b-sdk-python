@@ -1,0 +1,72 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout python SDK
+        uses: actions/checkout@v4
+        with:
+          path: f2b-sdk-python
+
+      - name: Checkout f2b-spec
+        uses: actions/checkout@v4
+        with:
+          repository: f2b-dev/f2b-spec
+          path: f2b-spec
+
+      - name: Checkout f2b-sandbox
+        uses: actions/checkout@v4
+        with:
+          repository: f2b-dev/f2b-sandbox
+          path: f2b-sandbox
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install sandbox
+        run: |
+          pnpm install --frozen-lockfile --dir f2b-spec
+          pnpm install --frozen-lockfile --dir f2b-sandbox
+
+      - name: Install Python package
+        working-directory: f2b-sdk-python
+        run: |
+          python -m pip install -U pip
+          pip install -e .
+          python -m compileall -q src
+
+      - name: Start sandbox (fake)
+        working-directory: f2b-sandbox
+        run: |
+          F2B_SANDBOX_BACKEND=fake F2B_AUTH_MODE=off PORT=8787 HOST=127.0.0.1 \
+            DATABASE_URL=file:./data/ci-py.db \
+            pnpm exec tsx src/server.ts &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8787/healthz && break
+            sleep 0.25
+          done
+
+      - name: Python smoke
+        working-directory: f2b-sdk-python
+        env:
+          F2B_SANDBOX_URL: http://127.0.0.1:8787
+        run: python scripts/smoke.py
