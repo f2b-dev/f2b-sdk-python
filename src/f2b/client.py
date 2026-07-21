@@ -1,4 +1,4 @@
-"""HTTP 客户端：默认对接 f2b-sandbox `/v1/sandboxes`。"""
+"""HTTP 客户端：默认对接 f2b-sandbox `/v1`；隧道可走独立 base。"""
 
 from __future__ import annotations
 
@@ -18,12 +18,22 @@ class F2bClient:
         *,
         base_url: str,
         path_prefix: str = "/v1",
+        tunnel_base_url: str | None = None,
+        tunnel_path_prefix: str = "/v1",
         api_key: str | None = None,
         timeout_sec: float = 60.0,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         prefix = path_prefix if path_prefix.startswith("/") else f"/{path_prefix}"
         self.path_prefix = prefix.rstrip("/")
+        # 隧道默认与 base 相同；BFF 可设 tunnel_path_prefix="/api"
+        self.tunnel_base_url = (tunnel_base_url or base_url).rstrip("/")
+        t_prefix = (
+            tunnel_path_prefix
+            if tunnel_path_prefix.startswith("/")
+            else f"/{tunnel_path_prefix}"
+        )
+        self.tunnel_path_prefix = t_prefix.rstrip("/")
         self.api_key = api_key
         self.timeout_sec = timeout_sec
 
@@ -41,13 +51,20 @@ class F2bClient:
             return base
         return f"{base}{sub if sub.startswith('/') else '/' + sub}"
 
-    def request(
+    def tunnels_path(self, sub: str = "") -> str:
+        base = f"{self.tunnel_path_prefix}/tunnels"
+        if not sub:
+            return base
+        return f"{base}{sub if sub.startswith('/') else '/' + sub}"
+
+    def request_at(
         self,
+        root: str,
         method: str,
         path: str,
         body: Mapping[str, Any] | None = None,
     ) -> Any:
-        url = f"{self.base_url}{path}"
+        url = f"{root.rstrip('/')}{path}"
         data = None if body is None else json.dumps(body).encode("utf-8")
         req = urllib.request.Request(
             url,
@@ -92,6 +109,14 @@ class F2bClient:
             return None
         return json.loads(raw)
 
+    def request(
+        self,
+        method: str,
+        path: str,
+        body: Mapping[str, Any] | None = None,
+    ) -> Any:
+        return self.request_at(self.base_url, method, path, body)
+
     def list_sandboxes(self, project_id: str | None = None) -> list[dict[str, Any]]:
         q = f"?projectId={urllib.parse.quote(project_id)}" if project_id else ""
         data = self.request("GET", f"{self.sandboxes_path()}{q}")
@@ -107,6 +132,53 @@ class F2bClient:
             self.sandboxes_path(f"/{urllib.parse.quote(sandbox_id)}"),
         )
         return Sandbox(self, data["sandbox"])
+
+    def get_usage(self, days: int = 7) -> dict[str, Any]:
+        n = max(1, min(90, int(days)))
+        data = self.request("GET", f"{self.path_prefix}/usage?days={n}")
+        return data.get("usage") or data
+
+    def list_templates(self) -> list[dict[str, Any]]:
+        data = self.request("GET", f"{self.path_prefix}/templates")
+        return list(data.get("templates") or [])
+
+    def list_tunnels(self, sandbox_id: str | None = None) -> list[dict[str, Any]]:
+        q = (
+            f"?sandboxId={urllib.parse.quote(sandbox_id)}"
+            if sandbox_id
+            else ""
+        )
+        data = self.request_at(
+            self.tunnel_base_url,
+            "GET",
+            f"{self.tunnels_path()}{q}",
+        )
+        return list(data.get("tunnels") or [])
+
+    def create_tunnel(self, **input: Any) -> dict[str, Any]:
+        data = self.request_at(
+            self.tunnel_base_url,
+            "POST",
+            self.tunnels_path(),
+            input or {},
+        )
+        return data["tunnel"]
+
+    def get_tunnel(self, tunnel_id: str) -> dict[str, Any]:
+        data = self.request_at(
+            self.tunnel_base_url,
+            "GET",
+            self.tunnels_path(f"/{urllib.parse.quote(tunnel_id)}"),
+        )
+        return data["tunnel"]
+
+    def close_tunnel(self, tunnel_id: str) -> dict[str, Any]:
+        data = self.request_at(
+            self.tunnel_base_url,
+            "DELETE",
+            self.tunnels_path(f"/{urllib.parse.quote(tunnel_id)}"),
+        )
+        return data["tunnel"]
 
 
 class LingjingClient(F2bClient):

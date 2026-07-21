@@ -1,4 +1,4 @@
-"""Sandbox 句柄：run / files / kill。"""
+"""Sandbox 句柄：run / files / pause / resume / kill。"""
 
 from __future__ import annotations
 
@@ -74,6 +74,22 @@ class Sandbox:
             f"{self._client.sandboxes_path(f'/{urllib.parse.quote(self.id)}/files')}?{q}",
         )
         return list(data.get("entries") or [])
+
+    def pause(self) -> dict[str, Any]:
+        data = self._client.request(
+            "POST",
+            self._client.sandboxes_path(f"/{urllib.parse.quote(self.id)}/pause"),
+        )
+        self._record = data["sandbox"]
+        return self._record
+
+    def resume(self) -> dict[str, Any]:
+        data = self._client.request(
+            "POST",
+            self._client.sandboxes_path(f"/{urllib.parse.quote(self.id)}/resume"),
+        )
+        self._record = data["sandbox"]
+        return self._record
 
     def kill(self) -> dict[str, Any]:
         data = self._client.request(

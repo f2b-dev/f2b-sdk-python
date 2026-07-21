@@ -15,7 +15,7 @@ from f2b import F2bClient, Sandbox
 
 
 def main() -> None:
-    base = os.environ.get("F2B_SANDBOX_URL", "http://127.0.0.1:8787")
+    base = os.environ.get("F2B_SANDBOX_URL", "http://127.0.0.1:13287")
     client = F2bClient(base_url=base, api_key=os.environ.get("F2B_API_KEY"))
 
     sbx = Sandbox.create(client, name="py-quickstart", template="base")
@@ -26,6 +26,10 @@ def main() -> None:
 
     sbx.write("/home/user/hello.txt", "lingjing-python")
     print("read:", sbx.read("/home/user/hello.txt"))
+
+    print("pause", sbx.pause().get("status"))
+    print("resume", sbx.resume().get("status"))
+    print("templates", [t.get("id") for t in client.list_templates()])
 
     killed = sbx.kill()
     print("killed", killed.get("status"))
