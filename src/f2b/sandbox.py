@@ -52,6 +52,57 @@ class Sandbox:
         )
         return data["result"]
 
+    def run_stream(
+        self,
+        cmd: str,
+        *,
+        cwd: str | None = None,
+        timeout_ms: int | None = None,
+        env: dict[str, str] | None = None,
+        on_event: Any | None = None,
+    ) -> dict[str, Any]:
+        """SSE 流式执行；on_event 可选回调每个事件 dict；返回最终 result。"""
+        body: dict[str, Any] = {"cmd": cmd}
+        if cwd is not None:
+            body["cwd"] = cwd
+        if timeout_ms is not None:
+            body["timeoutMs"] = timeout_ms
+        if env is not None:
+            body["env"] = env
+        result: dict[str, Any] | None = None
+        stdout = ""
+        stderr = ""
+        for ev in self._client.iter_sse(
+            self._client.sandboxes_path(
+                f"/{urllib.parse.quote(self.id)}/commands/stream"
+            ),
+            body,
+        ):
+            if on_event is not None:
+                on_event(ev)
+            et = ev.get("type")
+            if et == "stdout":
+                stdout += str(ev.get("text") or "")
+            elif et == "stderr":
+                stderr += str(ev.get("text") or "")
+            elif et == "result":
+                result = ev.get("result")  # type: ignore[assignment]
+            elif et == "error":
+                from .errors import F2bError
+
+                raise F2bError(
+                    str(ev.get("code") or "INTERNAL"),
+                    str(ev.get("message") or "stream error"),
+                )
+        if result is None:
+            result = {
+                "exitCode": 0,
+                "stdout": stdout,
+                "stderr": stderr,
+                "durationMs": 0,
+            }
+        return result
+
     def write(self, path: str, content: str) -> None:
         self._client.request(
             "POST",

@@ -117,6 +117,77 @@ class F2bClient:
     ) -> Any:
         return self.request_at(self.base_url, method, path, body)
 
+    def iter_sse(
+        self,
+        path: str,
+        body: Mapping[str, Any] | None = None,
+    ):
+        """POST 并解析 text/event-stream；yield 每个 data JSON 对象。"""
+        import json as _json
+
+        url = f"{self.base_url}{path}"
+        data = None if body is None else _json.dumps(body).encode("utf-8")
+        headers = self._headers(body is not None)
+        headers["Accept"] = "text/event-stream, application/json"
+        req = urllib.request.Request(
+            url, data=data, headers=headers, method="POST"
+        )
+        try:
+            res = urllib.request.urlopen(req, timeout=self.timeout_sec)
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode("utf-8") if e.fp else ""
+            payload = _safe_json(raw)
+            err = (payload or {}).get("error") or {}
+            raise F2bError(
+                err.get("code") or ErrorCode.INTERNAL,
+                err.get("message") or f"HTTP {e.code}",
+                status=e.code,
+                details=err.get("details"),
+                cause=e,
+            ) from e
+        except urllib.error.URLError as e:
+            raise F2bError(
+                ErrorCode.BACKEND_UNAVAILABLE,
+                str(e.reason) if getattr(e, "reason", None) else str(e),
+                cause=e,
+            ) from e
+
+        ctype = res.headers.get("Content-Type") or ""
+        if "text/event-stream" not in ctype:
+            raw = res.read().decode("utf-8")
+            payload = _safe_json(raw) or {}
+            if payload.get("result") is not None:
+                yield {"type": "result", "result": payload["result"]}
+                return
+            err = payload.get("error") or {}
+            raise F2bError(
+                err.get("code") or ErrorCode.INTERNAL,
+                err.get("message") or "expected event-stream",
+                status=getattr(res, "status", None),
+            )
+
+        buf = ""
+        while True:
+            chunk = res.read(256)
+            if not chunk:
+                break
+            buf += chunk.decode("utf-8", errors="replace")
+            while "\n\n" in buf:
+                block, buf = buf.split("\n\n", 1)
+                data_line = None
+                for line in block.split("\n"):
+                    if line.startswith("data: "):
+                        data_line = line[6:]
+                        break
+                if data_line is None or data_line in ("", "{}"):
+                    continue
+                try:
+                    ev = _json.loads(data_line)
+                except _json.JSONDecodeError:
+                    continue
+                if isinstance(ev, dict):
+                    yield ev
+
     def list_sandboxes(self, project_id: str | None = None) -> list[dict[str, Any]]:
         q = f"?projectId={urllib.parse.quote(project_id)}" if project_id else ""
         data = self.request("GET", f"{self.sandboxes_path()}{q}")

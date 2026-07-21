@@ -38,6 +38,18 @@ def main() -> int:
             print("run failed:", r, file=sys.stderr)
             return 2
 
+        stream_types: list[str] = []
+        streamed = sbx.run_stream(
+            "echo py-stream-ok",
+            on_event=lambda ev: stream_types.append(str(ev.get("type") or "")),
+        )
+        if "py-stream-ok" not in (streamed.get("stdout") or ""):
+            print("run_stream failed:", streamed, stream_types, file=sys.stderr)
+            return 2
+        if "result" not in stream_types and "stdout" not in stream_types:
+            print("run_stream missing events:", stream_types, file=sys.stderr)
+            return 2
+
         sbx.write("/home/user/smoke.txt", "py-ok")
         content = sbx.read("/home/user/smoke.txt")
         if content != "py-ok":
