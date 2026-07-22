@@ -76,7 +76,7 @@ python3 examples/quickstart.py
 ## 导出
 
 - `F2bClient` / `LingjingClient`（别名）
-- `Sandbox`（`create` / `run` / `run_stream` / `write` / `read` / `list_files` / `pause` / `resume` / `kill`）
+- `Sandbox`（`create` / `run` / `run_stream` / `write` / `read` / `list_files` / `pause` / `resume` / `update` / `kill`）
 - `F2bClient.get_usage` / `list_templates` / `list_tunnels` / `create_tunnel` / `close_tunnel`
 - `F2bError` / `ErrorCode`
 

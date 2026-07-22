@@ -142,6 +142,12 @@ class Sandbox:
         self._record = data["sandbox"]
         return self._record
 
+    def update(self, **input: Any) -> dict[str, Any]:
+        """延期 timeoutMs / 合并 metadata。"""
+        sb = self._client.update_sandbox(self.id, **input)
+        self._record = sb.data
+        return self._record
+
     def kill(self) -> dict[str, Any]:
         data = self._client.request(
             "DELETE",

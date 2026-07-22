@@ -204,6 +204,15 @@ class F2bClient:
         )
         return Sandbox(self, data["sandbox"])
 
+    def update_sandbox(self, sandbox_id: str, **input: Any) -> Sandbox:
+        """延期 timeoutMs / 合并 metadata（活动沙箱）。"""
+        data = self.request(
+            "PATCH",
+            self.sandboxes_path(f"/{urllib.parse.quote(sandbox_id)}"),
+            input or {},
+        )
+        return Sandbox(self, data["sandbox"])
+
     def get_usage(self, days: int = 7) -> dict[str, Any]:
         n = max(1, min(90, int(days)))
         data = self.request("GET", f"{self.path_prefix}/usage?days={n}")
