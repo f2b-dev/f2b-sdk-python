@@ -126,6 +126,17 @@ class Sandbox:
         )
         return list(data.get("entries") or [])
 
+    def delete_file(self, path: str, *, recursive: bool = False) -> None:
+        """删除文件；目录需 recursive=True。"""
+        params: dict[str, str] = {"path": path}
+        if recursive:
+            params["recursive"] = "1"
+        q = urllib.parse.urlencode(params)
+        self._client.request(
+            "DELETE",
+            f"{self._client.sandboxes_path(f'/{urllib.parse.quote(self.id)}/files')}?{q}",
+        )
+
     def pause(self) -> dict[str, Any]:
         data = self._client.request(
             "POST",
