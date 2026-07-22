@@ -56,6 +56,14 @@ def main() -> int:
             print("file roundtrip failed:", content, file=sys.stderr)
             return 3
 
+        raw = bytes([0x00, 0x01, 0xFE, 0xFF])
+        sbx.write("/home/user/smoke.bin", raw)
+        b64 = sbx.read("/home/user/smoke.bin", encoding="base64")
+        got = sbx.read_bytes("/home/user/smoke.bin")
+        if got != raw:
+            print("base64/bytes roundtrip failed:", got, b64, file=sys.stderr)
+            return 3
+
         entries = sbx.list_files("/home/user")
         if not isinstance(entries, list):
             print("list_files failed:", entries, file=sys.stderr)

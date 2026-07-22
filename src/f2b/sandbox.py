@@ -103,20 +103,45 @@ class Sandbox:
             }
         return result
 
-    def write(self, path: str, content: str) -> None:
+    def write(
+        self,
+        path: str,
+        content: str | bytes,
+        *,
+        encoding: str | None = None,
+    ) -> None:
+        """写文件。bytes 自动 base64；encoding 为 utf8|base64。"""
+        import base64 as b64mod
+
+        if isinstance(content, (bytes, bytearray)):
+            body = {
+                "path": path,
+                "content": b64mod.b64encode(bytes(content)).decode("ascii"),
+                "encoding": "base64",
+            }
+        else:
+            enc = encoding or "utf8"
+            body = {"path": path, "content": content, "encoding": enc}
         self._client.request(
             "POST",
             self._client.sandboxes_path(f"/{urllib.parse.quote(self.id)}/files"),
-            {"path": path, "content": content, "encoding": "utf8"},
+            body,
         )
 
-    def read(self, path: str) -> str:
-        q = urllib.parse.urlencode({"path": path, "encoding": "utf8"})
+    def read(self, path: str, *, encoding: str = "utf8") -> str:
+        """读文件。encoding=utf8|base64，返回对应编码的字符串。"""
+        q = urllib.parse.urlencode({"path": path, "encoding": encoding})
         data = self._client.request(
             "GET",
             f"{self._client.sandboxes_path(f'/{urllib.parse.quote(self.id)}/files')}?{q}",
         )
         return str(data["file"]["content"])
+
+    def read_bytes(self, path: str) -> bytes:
+        """以二进制读取文件。"""
+        import base64 as b64mod
+
+        return b64mod.b64decode(self.read(path, encoding="base64"))
 
     def list_files(self, path: str = "/home/user") -> list[dict[str, Any]]:
         q = urllib.parse.urlencode({"list": "1", "path": path})
