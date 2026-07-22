@@ -57,13 +57,19 @@ jobs:
       - name: Start sandbox (fake)
         working-directory: f2b-sandbox
         run: |
+          mkdir -p data
           F2B_SANDBOX_BACKEND=fake F2B_AUTH_MODE=off PORT=8787 HOST=127.0.0.1 \
             DATABASE_URL=file:./data/ci-py.db \
             pnpm exec tsx src/server.ts &
           for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8787/healthz && break
+            if curl -sf http://127.0.0.1:8787/healthz; then
+              echo
+              exit 0
+            fi
             sleep 0.25
           done
+          echo "sandbox healthz timeout" >&2
+          exit 1
 
       - name: Python smoke
         working-directory: f2b-sdk-python
