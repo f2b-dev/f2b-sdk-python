@@ -188,8 +188,18 @@ class F2bClient:
                 if isinstance(ev, dict):
                     yield ev
 
-    def list_sandboxes(self, project_id: str | None = None) -> list[dict[str, Any]]:
-        q = f"?projectId={urllib.parse.quote(project_id)}" if project_id else ""
+    def list_sandboxes(
+        self,
+        project_id: str | None = None,
+        *,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        params: dict[str, str] = {}
+        if project_id:
+            params["projectId"] = project_id
+        if status:
+            params["status"] = status
+        q = f"?{urllib.parse.urlencode(params)}" if params else ""
         data = self.request("GET", f"{self.sandboxes_path()}{q}")
         return list(data.get("sandboxes") or [])
 
