@@ -5,3 +5,6 @@ dist/
 build/
 .venv/
 venv/
+
+src/*.egg-info/
+.pack-check/

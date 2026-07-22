@@ -7,6 +7,7 @@
 
 ### Added
 
+- `scripts/pack-check.sh`：sdist 审阅（不 upload PyPI）
 - CI 起 fake sandbox 跑 `scripts/smoke.py`；healthz 等待失败即退出
 
 ## [0.1.0] - 2026-07

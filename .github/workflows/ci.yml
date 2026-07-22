@@ -54,6 +54,11 @@ jobs:
           pip install -e .
           python -m compileall -q src
 
+      # 1.0 前只 sdist 审阅，禁止 twine upload
+      - name: pack-check (no upload)
+        working-directory: f2b-sdk-python
+        run: bash scripts/pack-check.sh
+
       - name: Start sandbox (fake)
         working-directory: f2b-sandbox
         run: |
