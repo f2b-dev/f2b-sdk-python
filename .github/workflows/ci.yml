@@ -32,7 +32,7 @@ jobs:
           repository: f2b-dev/f2b-sandbox
           path: f2b-sandbox
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
