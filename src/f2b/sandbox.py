@@ -137,6 +137,26 @@ class Sandbox:
             f"{self._client.sandboxes_path(f'/{urllib.parse.quote(self.id)}/files')}?{q}",
         )
 
+    def mkdir(self, path: str, *, recursive: bool = True) -> None:
+        """创建目录；默认 recursive=True。"""
+        self._client.request(
+            "POST",
+            self._client.sandboxes_path(
+                f"/{urllib.parse.quote(self.id)}/files/mkdir"
+            ),
+            {"path": path, "recursive": recursive},
+        )
+
+    def rename(self, from_path: str, to_path: str) -> None:
+        """重命名或移动文件/目录。"""
+        self._client.request(
+            "POST",
+            self._client.sandboxes_path(
+                f"/{urllib.parse.quote(self.id)}/files/rename"
+            ),
+            {"from": from_path, "to": to_path},
+        )
+
     def pause(self) -> dict[str, Any]:
         data = self._client.request(
             "POST",
